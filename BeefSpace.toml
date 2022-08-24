@@ -1,5 +1,5 @@
 FileVersion = 1
-Projects = {LybCL = {Path = "."}, TestConsoleProj = {Path = "../TestConsoleProj"}}
+Projects = {LybCL = {Path = "."}, BeefTestProj = {Path = "../BeefTestProj"}}
 
 [Workspace]
-StartupProject = "TestConsoleProj"
+StartupProject = "BeefTestProj"

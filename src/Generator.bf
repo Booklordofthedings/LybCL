@@ -1,4 +1,9 @@
 using System;
+using System;
+using System.Reflection;
+using System.FFI;
+using System.Diagnostics;
+using System.Collections;
 namespace LybCL
 {
 	class Generator
@@ -11,8 +16,13 @@ namespace LybCL
 			    
 			        for (let method in type.GetMethods(.Static))
 			        {
+						//Console.WriteLine(method.Name);
+						
 			           if(method.GetCustomAttribute<CommandableAttribute>() case .Ok )
-							Console.WriteLine(method.Name);
+						{
+							Result<Variant, MethodInfo.CallError> t = method.Invoke(null);
+						}
+						
 			        }
 			}
 		}

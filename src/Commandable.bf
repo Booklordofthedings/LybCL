@@ -1,7 +1,7 @@
 using System;
 namespace LybCL
 {
-	[AttributeUsage(.Method, .ReflectAttribute, ReflectUser=.Methods)]
+	[AttributeUsage(.Method, .ReflectAttribute, ReflectUser=.All, AlwaysIncludeUser=.All)]
 	struct CommandableAttribute : Attribute
 	{
 		public String Name;
