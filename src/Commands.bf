@@ -1,6 +1,0 @@
-namespace LybCL
-{
-	class Commands
-	{
-	}
-}

@@ -5,7 +5,7 @@ namespace LybCL
 	struct CommandableAttribute : Attribute
 	{
 		public String Name;
-		public this(String name)
+		public this(String name, bool asDefault = false)
 		{
 			Name = name;
 		}

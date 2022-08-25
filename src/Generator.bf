@@ -6,10 +6,10 @@ using System.Diagnostics;
 using System.Collections;
 namespace LybCL
 {
-	class Generator
+	extension Commandline
 	{
 		
-		public static void Generate()
+		private static void Generate()
 		{
 			for (let type in Type.Types)
 			{
