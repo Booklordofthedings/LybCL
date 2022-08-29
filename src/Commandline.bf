@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Reflection;
 namespace LybCL
 {
 	class Commandline
@@ -10,13 +12,19 @@ namespace LybCL
 		-a d c b = -a -b -c -d
 		*/
 
+		private static Dictionary<String, MethodInfo> RegisteredCommands; //All commands are in here
+
 		/// Only method needed to be called by the user
 		/// @param args args from the main method
-		public static Result<void> HandleArgs(String[] args)
+		public static void HandleArgs(String[] args)
 		{
-			Generate();
-			//Map arguments and functiosn to 
-			return .Ok;
+			RegisteredCommands = Generate(); //Registering
+
+			//Parse the args
+			ArgsParser.ParseArgs(args);
+
+			//Cleanup
+			DeleteDictionaryAndKeys!(RegisteredCommands);
 		}
 	}
 }
