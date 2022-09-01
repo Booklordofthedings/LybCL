@@ -7,7 +7,7 @@ A simple to use Command line parsing library for the beef programming language
 - Call the getParameter type functions while in the command function to get info about other parameters
 
 ### Example
-```cs
+```
 Program.exe make "dir/text.txt" "test.js" -v c b --out_dir "dist/test" --log_file "log.txt"
 
 1st: The name of the program (not handled by lybcl)
