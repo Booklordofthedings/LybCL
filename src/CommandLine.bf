@@ -54,7 +54,7 @@ class CommandLine
 				param.Remove(0,1);
 				_toggles.Add(param);
 
-				while( args[i+1].StartsWith("-") || i < args.Count)
+				while(i < args.Count && args[i].StartsWith("-"))
 				{
 					String temp = new String(args[i]);
 					_toggles.Add(temp);
