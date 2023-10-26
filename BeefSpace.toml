@@ -1,0 +1,5 @@
+FileVersion = 1
+Projects = {LybCL = {Path = "."}, Test = {Path = "Test"}}
+
+[Workspace]
+StartupProject = "Test"

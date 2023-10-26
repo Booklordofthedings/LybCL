@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 namespace LybCL;
 
-class CommandLine
+class oldCommandLine
 {
 	private String _command;
 
