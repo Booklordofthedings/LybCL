@@ -27,7 +27,7 @@ class LybCl
 
 	///Wether values are allowed to have one or mode leading minus'
 	/// --path --other //If its true it will return "--other" as a value for "path"
-	public bool AllowLeadingMinusInValue { get; set; } = false;{}
+	public bool AllowLeadingMinusInValue { get; set; } = false;
 
 	public int Count
 	{
@@ -112,6 +112,7 @@ class LybCl
 		{
 			for(let method in type.GetMethods(.Static))
 			{
+				Console.WriteLine(method.Name); //This should simply output every reflected method
 				var attributeInfo = method.GetCustomAttribute<CMDRouterAttribute>();
 				if(attributeInfo case .Err)
 					return;
@@ -144,12 +145,15 @@ class LybCl
 					if(paramValue == "")
 						return;
 
-					var re = float.Parse("");
-					if(paramType.GetMethod("Parse",.Static) case .Ok(let parseFunction))
+					for(let ifaces in paramType.Interfaces)
 					{
-						var parseRes = parseFunction.Invoke(null, paramValue);
-						if()
-
+						if(ifaces.GetName(..scope .()) == "IParseAble")
+						{
+							var re = paramType.GetMethod("LybParse", .Static).Value.Invoke(null,paramValue);
+							if(re case .Err)
+								return;
+							arr[i] = re.Value.DataPtr;
+						}
 					}
 				}
 
@@ -186,7 +190,7 @@ class LybCl
 
 }
 
-[AttributeUsage(.Method, .AlwaysIncludeTarget | .ReflectAttribute, ReflectUser=.StaticMethods), AlwaysInclude]
+[AttributeUsage(.Method, .AlwaysIncludeTarget | .ReflectAttribute, ReflectUser=.All), AlwaysInclude]
 struct CMDRouterAttribute : Attribute
 {
 	public String Route;
@@ -194,5 +198,27 @@ struct CMDRouterAttribute : Attribute
 	public this(String pRoute, bool pCaseSensitivity = false)
 	{
 		Route = pRoute;
+	}
+}
+
+
+namespace System
+{
+	[Reflect,AlwaysInclude]
+	interface IParseAble
+	{
+		[Reflect,AlwaysInclude]
+		public static Result<Variant> LybParse(StringView pValue);
+	}
+
+	extension Float : IParseAble
+	{
+		public static System.Result<System.Variant> LybParse(StringView pValue)
+		{
+			var res = Float.Parse(pValue);
+			if(res case .Err)
+				return .Err;
+			return .Ok(Variant.Create(res.Value));
+		}
 	}
 }

@@ -2,19 +2,19 @@ namespace Test;
 using System;
 using System.Reflection;
 using LybCL;
+[AlwaysInclude,Reflect]
 class Program
 {
 	public static void Main(String[] args)
 	{
 		var cl = scope LybCl(args);
-		cl.HasFlag("verbose","v");
+		cl.Route();
 		Console.Read();
 	}
 
-	[CMDRouter("route")]
-	public static void Test(bool t = true)
+	[CMDRouter("route {f}")]
+	public static void Test(LybCl l,Float f)
 	{
-		if(t)
-			Console.WriteLine("fdsfd");
+		Console.WriteLine("dsfdsfdsf");
 	}
 }
