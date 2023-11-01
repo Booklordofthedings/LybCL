@@ -1,21 +1,11 @@
 ## LybCL
-A simple to use Command line parsing library for the beef programming language
+A simpleish commandline parsing library with automatic routing functionality
 
-### How to use
-- Create a commandline object and pass in the args[] into the constructor
-- Acess the parsed data on the commandline object using the methods
+### Installation
+Clone the repository and add it to your beef workspace as you usually would.
+This libary is also single file, so you may also just copy the file directly into your project if necessary
 
-### Available methods:
-getCommand: returns the command that has been identified or "Default" if no command was given  
-getArgument: returns the required parameter by index  
-getFlag: returns wether a specific flag has been set  
-getParameter: returns a named paramter if it has been set  
-
-```
-Program.exe install "c://programs/test" -v -h -g -name test
-
-command = install
-argument[0] = c://programs/test"
-flags = v, h, g
-parameter = name: test
-```
+### Documentation
+The .bf sourcefile contains all information neccessary to use the library.
+You basically just create a new LybCl object by inserting the args[] and then call function on that object.
+The CMDRouter attribute can be used for the automatic routing functionality, however you will need to ensure the type is refelcted.
