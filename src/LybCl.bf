@@ -1,6 +1,3 @@
-namespace LybCL;
-using System;
-using System.Collections;
 /*
 	[LybCL]
 	Lyb Commandline library/tool
@@ -8,26 +5,82 @@ using System.Collections;
 	Made by Booklordofthedings
 
 	Usage:
-		Everything starts by creating a commandline object and passing in the String[]
+		Everything starts by creating a commandline object and by passing in the String[]
 		LybCl handles everything else and you only need to make sure to correctly dispose of it.
 
 		GetArgs(int) returns the value of the args by index, if it exists. Otherwise it returns an empty stringview
 		GetCommand() returns the command thats to be executed: ./Programname.exe {command} -parameters
+		HasFlag(params StringView) checks wether a given flag is set as a value. returns a boolean
+		GetParameter(params StringView) checks the value of a given parameter. Returns an empty string if its not found.
+		RouteReturnCode{get;set} allows you to set the return value of the Route() call. only use inside one of the marked methods
+		Route() Does reflection and calls functions that match the given route
+			-Use CMDRouterAttriíbute on a static function to mark it as a routeable functions
+			-The first attribute needs to be a LybCl type
+			-Any other parameter needs to have be nullable (Type?) and have a Parse(StringView) function that returns a Result<T>
+			-the route is made out of literals divided by spaces, while the required variables are to be included inside of curly brackets
+				"generate new {a}" <- this route executes, if the user calls Program.exe generate new {any}. any being any value that will be parsed and inserted into the route
 
+	Parameter design:
+	[ProgramName] [Command] [Subcommand] [Parameter] [Arguments/Flags]
+	[ProgramName] name of the program/exectuteable to run (test.exe/git)
+	[Command]/[Subcommands] indicates the route or specific functionality to be executed. may be only one command (install) or multiple (get install) or any other lenght
+	[Parameter] variable values that a command needs, like a filepath or url
+	[Arguments/Flags] contain additional information that is not required but may change how the command executes. flags are only boolean while arguments have to contain
+	an example call would be something like this
+
+	./Program.exe repository generate "https://github.com/booklordofthedings/repo" --verbose --logfile log.txt
+
+
+	some programs support arguments between the program name and command, however this tool does not
+	if you want to do global settings that apply to every command you can simply put them at the end of the command
+	and just read them in before doing any processing or routing, to set them
 */
-
+namespace LybCL;
+using System;
+using System.Reflection;
+using System.Collections;
 class LybCl
 {
 	private String[] _args;
+	private Dictionary<String, String>  _parameters = new .() ~ DeleteDictionaryAndKeysAndValues!(_);
+	private CMDRouterAttribute _attributeInfo;
 
 	public this(String[] pArgs)
 	{
 		_args = pArgs;
+		for(int i < _args.Count)
+		{
+			if(!_args[i].StartsWith('-'))
+				continue;
+
+			int endIndex = -1;
+			for(int j < _args[i].Length)
+			{
+				if(_args[i][j] != '-')
+				{
+					endIndex = j;
+					break;
+				}
+			}
+
+			if(endIndex < 0)
+				continue;
+
+			StringView name = .(_args[i],endIndex);
+
+			if(!(i+1 < _args.Count) || _args[i+1].StartsWith('-'))
+			{
+				_parameters.Add(new .(name), new .(""));
+				continue;
+			}
+
+			_parameters.Add(new .(name), new .(_args[i+1]));
+			i++;
+		}
 	}
 
-	///Wether values are allowed to have one or mode leading minus'
-	/// --path --other //If its true it will return "--other" as a value for "path"
-	public bool AllowLeadingMinusInValue { get; set; } = false;
+	//Allows users to set what the call for route will return
+	public int RouteReturnCode { get; set; } = 0;
 
 	public int Count
 	{
@@ -36,7 +89,7 @@ class LybCl
 		}
 	}
 
-	///Get the arguments by id. Empty if it doesnt exist
+	///Get the raw argument at the given index or an empty string
 	public StringView GetArgs(int pIndex)
 	{
 		if(pIndex < 0 || !(pIndex < _args.Count))
@@ -45,7 +98,7 @@ class LybCl
 			return _args[pIndex];
 	}
 
-	///Get the main command
+	///Get the command or an empty string
 	public StringView GetCommand()
 	{
 		if(_args.Count < 1)
@@ -56,169 +109,146 @@ class LybCl
 			return "";
 	}
 
-	///Wether a specific flag is set by alias
+	///Get wether a specific flag is set, allows aliases
 	public bool HasFlag(params Span<StringView> pArgs)
 	{
-		for(int i < _args.Count)
+		for(var arg in pArgs)
 		{
-			if(_args[i].StartsWith('-'))
-			{
-				for(let match in pArgs)
-				{
-					var match1 = scope $"-{match}";
-					var match2 = scope $"--{match}";
+			if(!_parameters.ContainsKey(scope .(arg)))
+				continue;
 
-					if(_args[i] == match1 || _args[i] == match2)
-						return true;
-				}
-			}
+			if(_parameters[scope .(arg)] == "")
+				return true;
 		}
 		return false;
 	}
 
-	///Gets the value of a paramter by name or alias. Empty if not available
+	///Gets the value of a argument and returns empty if not found
 	public StringView GetParameter(params Span<StringView> pArgs)
 	{
-		StringView toReturn = "";
-		for(int i < _args.Count)
+		for(var arg in pArgs)
 		{
-			if(_args[i].StartsWith('-'))
-			{
-				for(let match in pArgs)
-				{
-					var match1 = scope $"-{match}";
-					var match2 = scope $"--{match}";
-
-					if(!(_args[i] == match1) &&  !(_args[i] == match2))
-						continue;
-					
-					if(!(i+1 < _args.Count))
-						continue;
-
-					if(_args[i+1].StartsWith('-') && !AllowLeadingMinusInValue)
-						continue;
-
-					toReturn = _args[i+1];
-				}
-			}
+			if(!_parameters.ContainsKey(scope .(arg)))
+				continue;
+			return _parameters[scope .(arg)];
 		}
-		return toReturn;
+		return "";
 	}
 
-	///Process the routes set via the attribute and calls relevant functions
+	///Process all of the reflected and routed methods and tries to find one that matches, then it calls it
 	public void Route()
 	{
 		for(let type in Type.Types)
 		{
-			for(let method in type.GetMethods(.Static))
+			m: for(let method in type.GetMethods())
 			{
-				Console.WriteLine(method.Name); //This should simply output every reflected method
-				var attributeInfo = method.GetCustomAttribute<CMDRouterAttribute>();
+				let attributeInfo = method.GetCustomAttribute<CMDRouterAttribute>();
 				if(attributeInfo case .Err)
-					return;
-
-				var route = attributeInfo.Value.Route;
-				List<(StringView,StringView)> fields = scope .();
-				var res = _MatchRoute(route, _args, fields);
-				if(res case .Err)
 					continue;
-
-				Object[] arr = scope Object[method.ParamCount];
-				for(int i = 0; i < method.ParamCount; i++)
+				_attributeInfo = attributeInfo.Value;
+				//Ensure that the route works
+				var routingList = scope List<StringView>();
+				attributeInfo.Value.GetRouteList(routingList);
+				r: for(int i < routingList.Count)
 				{
-				 	if(i == 0)
-					{
-						arr[i] = this;
-						continue;
-					}
+					if(!(i < _args.Count))
+						continue m;
 
-					var paramType = method.GetParamType(i);
-					var paramName = method.GetParamName(i);
+					if(routingList[i].StartsWith('{') && routingList[i].EndsWith('}'))
+						continue r;
 
-					StringView paramValue = "";
-					for(let pair in fields)
-					{
-						if(pair.0 != paramName)
-							continue;
-						paramValue = pair.1;
-					}
-					if(paramValue == "")
-						return;
-
-					for(let ifaces in paramType.Interfaces)
-					{
-						if(ifaces.GetName(..scope .()) == "IParseAble")
-						{
-							var re = paramType.GetMethod("LybParse", .Static).Value.Invoke(null,paramValue);
-							if(re case .Err)
-								return;
-							arr[i] = re.Value.DataPtr;
-						}
-					}
+					if(routingList[i] != _args[i])
+						continue m;
 				}
 
-				method.Invoke(null,arr);
+				Object[] args = scope Object[method.ParamCount];
+				for(int i = 0; i < method.ParamCount; i++)
+				{
+					if(i == 0)
+					{
+						args[i] = this;
+						continue;
+					}
+					for(var fd in method.GetParamType(i).GetMethods())
+					{
+						Console.WriteLine(fd.Name);
+					}
+					args[i] = null;
+				}
+				var res = method.Invoke(null, params args);
+				res.Dispose();
 			}
 		}
-
 	}
 
-	///Checks wether 2 routes match up and returns a key value pair for parsing inputs
-	private Result<void> _MatchRoute(StringView pRoute, String[] pArgs, List<(StringView,StringView)> pOut)
+	public StringView GetValue(StringView pVal)
 	{
-		var enumerator = pRoute.Split(scope char8[](' ','\t'),.RemoveEmptyEntries);
-		args: for(let entry in enumerator)
+		var route = scope List<StringView>();
+		_attributeInfo.GetRouteList(route);
+		for(int i < route.Count)
 		{
-			if(@entry.MatchIndex >= pArgs.Count)
-				return .Err; //The route has more required fields than we have args
-
-			if(entry.StartsWith('{') && entry.EndsWith('}'))
-			{ //Variable arguments
-				pOut.Add((
-					.(entry,1,entry.Length-2),
-					pArgs[@entry.MatchIndex]
-					));
-				continue args;
+			if(route[i] == scope $"\{{pVal}\}")
+			{
+				if(i < _args.Count)
+					return _args[i];
 			}
-
-			if(!(entry == pArgs[@entry.MatchIndex]))
-				return .Err;
 		}
-		return .Ok;
-
+		return "";
 	}
-
 }
 
 [AttributeUsage(.Method, .AlwaysIncludeTarget | .ReflectAttribute, ReflectUser=.All), AlwaysInclude]
-struct CMDRouterAttribute : Attribute
+struct CMDRouterAttribute : Attribute, IOnMethodInit
 {
-	public String Route;
-
-	public this(String pRoute, bool pCaseSensitivity = false)
+	private String _route;
+	public this(String pRoute)
 	{
-		Route = pRoute;
+		_route = pRoute;
+	}
+
+	public void GetRouteList(List<StringView> pBuffer)
+	{
+		var seperationChars = scope char8[](' ','\t');
+		var enumerator = _route.Split(seperationChars,.RemoveEmptyEntries);
+		for(let entry in enumerator)
+			pBuffer.Add(entry);
+	}
+
+	[Comptime]
+	public void OnMethodInit(MethodInfo methodInfo, Self* prev)
+	{
+		
+		String toAppend = scope .();
+		for(int i = 1; i < methodInfo.ParamCount; i++)
+		{
+
+			//Remove nullable
+			var t = methodInfo.GetParamType(i) as SpecializedGenericType;
+
+			toAppend.Append(scope $"""
+				var {methodInfo.GetParamName(i)};
+				let parseResult{methodInfo.GetParamName(i)} = {t.GetGenericArg(0).GetFullName(.. scope .())}.Parse(cl.GetValue("{methodInfo.GetParamName(i)}"));
+				if(parseResult{methodInfo.GetParamName(i)} case .Err)
+					return;
+				{methodInfo.GetParamName(i)} = ({methodInfo.GetParamType(i)})parseResult{methodInfo.GetParamName(i)}.Value;
+
+				""");
+		}
+		Compiler.EmitMethodEntry(methodInfo, toAppend);
 	}
 }
 
 
+/*
+	Here are the types that dont have a 
+*/
 namespace System
 {
-	[Reflect,AlwaysInclude]
-	interface IParseAble
+	extension StringView
 	{
-		[Reflect,AlwaysInclude]
-		public static Result<Variant> LybParse(StringView pValue);
-	}
-
-	extension Float : IParseAble
-	{
-		public static System.Result<System.Variant> LybParse(StringView pValue)
+		public static Result<StringView> Parse(StringView pInput)
 		{
-			var res = Float.Parse(pValue);
-			if(res case .Err)
-				return .Err;
-			return .Ok(Variant.Create(res.Value));
+			return .Ok(pInput);
 		}
 	}
 }

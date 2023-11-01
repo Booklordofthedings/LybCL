@@ -1,6 +1,0 @@
-FileVersion = 1
-Dependencies = {corlib = "*", LybCL = "*"}
-
-[Project]
-Name = "Test"
-StartupObject = "Test.Program"
